@@ -1,8 +1,8 @@
 {
   "name": "foundry-zksync-mcp",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "MCP server exposing foundry-zksync CLI tools to AI assistants",
-  "mcpName": "io.github.jrigada/foundry-zksync",
+  "mcpName": "io.github.Jrigada/foundry-zksync",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
