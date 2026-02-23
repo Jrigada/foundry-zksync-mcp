@@ -177,6 +177,27 @@ describe("deploySchema", () => {
     });
     expect(result.success).toBe(true);
   });
+
+  it("accepts privateKey for local dev", () => {
+    const result = deploySchema.safeParse({
+      projectPath: "/project",
+      contractPath: "src/Token.sol:Token",
+      rpcUrl: "http://127.0.0.1:8011",
+      privateKey: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts broadcast flag", () => {
+    const result = deploySchema.safeParse({
+      projectPath: "/project",
+      contractPath: "src/Token.sol:Token",
+      rpcUrl: "http://127.0.0.1:8011",
+      privateKey: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+      broadcast: true,
+    });
+    expect(result.success).toBe(true);
+  });
 });
 
 describe("castAbiEncodeSchema", () => {
@@ -287,6 +308,16 @@ describe("castSendSchema", () => {
       signature: "transfer(address,uint256)",
       rpcUrl: "https://mainnet.era.zksync.io",
       ledger: true,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts privateKey for local dev", () => {
+    const result = castSendSchema.safeParse({
+      to: "0x1234",
+      signature: "transfer(address,uint256)",
+      rpcUrl: "http://127.0.0.1:8011",
+      privateKey: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
     });
     expect(result.success).toBe(true);
   });
@@ -404,6 +435,18 @@ describe("verifySchema", () => {
       retries: 3,
     });
     expect(result.success).toBe(true);
+  });
+
+  it("rejects retries=0 (forge requires >=1)", () => {
+    const result = verifySchema.safeParse({
+      projectPath: "/project",
+      contractAddress: "0x1234567890abcdef1234567890abcdef12345678",
+      contractPath: "src/Token.sol:Token",
+      verifier: "zksync",
+      verifierUrl: "https://explorer.zksync.io/contract_verification",
+      retries: 0,
+    });
+    expect(result.success).toBe(false);
   });
 });
 

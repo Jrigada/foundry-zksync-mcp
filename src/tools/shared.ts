@@ -48,7 +48,10 @@ export const walletFields = {
   from: z
     .string()
     .optional()
-    .describe("Sender address, used with --unlocked or hardware wallets"),
+    .describe(
+      "Sender address, used with --unlocked or hardware wallets. " +
+      "Maps to --from for cast/deploy, --sender for forge script.",
+    ),
   ledger: z
     .boolean()
     .optional()

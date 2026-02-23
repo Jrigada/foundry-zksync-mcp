@@ -4,7 +4,7 @@ import { castSend } from "../tools/cast_send.js";
 import { verify } from "../tools/verify.js";
 import { readFoundryToml } from "../tools/read_foundry_toml.js";
 import { anvilZkSync } from "../tools/anvil_zksync.js";
-import { buildWalletArgs, hasSigningMethod } from "../tools/shared.js";
+import { buildWalletArgs, buildWalletArgsForScript, hasSigningMethod } from "../tools/shared.js";
 
 describe("deploy validation", () => {
   it("rejects when no signing method is provided", async () => {
@@ -123,6 +123,29 @@ describe("buildWalletArgs", () => {
     const args = buildWalletArgs({});
     expect(args).toEqual([]);
   });
+
+  it("builds --private-key flag", () => {
+    const args = buildWalletArgs({ privateKey: "0xdeadbeef" });
+    expect(args).toEqual(["--private-key", "0xdeadbeef"]);
+  });
+});
+
+describe("buildWalletArgsForScript", () => {
+  it("maps from to --sender (not --from)", () => {
+    const args = buildWalletArgsForScript({ from: "0xabc" });
+    expect(args).toEqual(["--sender", "0xabc"]);
+    expect(args).not.toContain("--from");
+  });
+
+  it("builds --private-key flag", () => {
+    const args = buildWalletArgsForScript({ privateKey: "0xdeadbeef" });
+    expect(args).toEqual(["--private-key", "0xdeadbeef"]);
+  });
+
+  it("builds --unlocked with --sender", () => {
+    const args = buildWalletArgsForScript({ unlocked: true, from: "0xabc" });
+    expect(args).toEqual(["--unlocked", "--sender", "0xabc"]);
+  });
 });
 
 describe("hasSigningMethod", () => {
@@ -148,5 +171,9 @@ describe("hasSigningMethod", () => {
 
   it("returns true for aws", () => {
     expect(hasSigningMethod({ aws: true })).toBe(true);
+  });
+
+  it("returns true for privateKey", () => {
+    expect(hasSigningMethod({ privateKey: "0xdeadbeef" })).toBe(true);
   });
 });

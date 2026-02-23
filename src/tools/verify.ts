@@ -53,10 +53,10 @@ export const verifySchema = z.object({
   retries: z
     .number()
     .int()
-    .min(0)
+    .min(1)
     .max(10)
     .optional()
-    .describe("Number of verification retries (default: 2, max: 10). Forge retries on transient failures."),
+    .describe("Number of verification retries (default: 2, max: 10). Minimum is 1. Forge retries on transient failures."),
   extraArgs: z
     .array(z.string())
     .optional()

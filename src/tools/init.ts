@@ -40,11 +40,10 @@ export const initSchema = z.object({
 export type InitInput = z.infer<typeof initSchema>;
 
 export async function init(input: InitInput): Promise<ToolResult> {
-  const args: string[] = ["init"];
-
-  if (input.name) {
-    args.push(input.name);
-  }
+  // Build the target directory as an absolute path so forge init can create
+  // it — avoids ENOENT when projectPath doesn't exist yet (can't use as cwd).
+  const targetDir = input.name ? join(input.projectPath, input.name) : input.projectPath;
+  const args: string[] = ["init", targetDir];
 
   if (input.noGit) {
     args.push("--no-git");
@@ -58,7 +57,6 @@ export async function init(input: InitInput): Promise<ToolResult> {
 
   try {
     const { stdout, stderr } = await execFileAsync("forge", args, {
-      cwd: input.projectPath,
       env: buildEnv(),
       maxBuffer: 10 * 1024 * 1024,
       timeout: 120_000,
@@ -66,7 +64,7 @@ export async function init(input: InitInput): Promise<ToolResult> {
 
     const initOutput = [stdout, stderr].filter(Boolean).join("\n");
 
-    const projectDir = input.name ? join(input.projectPath, input.name) : input.projectPath;
+    const projectDir = targetDir;
     let configNote = "";
     try {
       const tomlPath = join(projectDir, "foundry.toml");

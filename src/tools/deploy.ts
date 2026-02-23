@@ -20,6 +20,14 @@ export const deploySchema = z.object({
 
   ...walletFields,
 
+  broadcast: z
+    .boolean()
+    .optional()
+    .describe(
+      "If true, actually broadcast the deployment transaction on-chain. " +
+      "Without this, forge create runs in dry-run mode.",
+    ),
+
   constructorArgs: z
     .array(z.string())
     .optional()
@@ -78,6 +86,11 @@ export async function deploy(input: DeployInput): Promise<ToolResult> {
   }
 
   const args: string[] = ["create", "--zksync", input.contractPath, "--rpc-url", input.rpcUrl];
+
+  if (input.broadcast) {
+    args.push("--broadcast");
+  }
+
   args.push(...buildWalletArgs(input));
 
   if (input.constructorArgs && input.constructorArgs.length > 0) {
