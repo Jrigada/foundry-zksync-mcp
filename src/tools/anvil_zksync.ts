@@ -36,6 +36,55 @@ export const anvilZkSyncSchema = z.object({
 
 export type AnvilZkSyncInput = z.infer<typeof anvilZkSyncSchema>;
 
+interface ParsedAccount {
+  address: string;
+  privateKey: string;
+}
+
+function parseAnvilOutput(raw: string): { accounts: ParsedAccount[]; chainId?: string } {
+  const accounts: ParsedAccount[] = [];
+  const lines = raw.split("\n");
+
+  let inAccounts = false;
+  let inKeys = false;
+  const addresses: string[] = [];
+  const keys: string[] = [];
+
+  for (const line of lines) {
+    if (line.includes("Available Accounts")) {
+      inAccounts = true;
+      inKeys = false;
+      continue;
+    }
+    if (line.includes("Private Keys")) {
+      inAccounts = false;
+      inKeys = true;
+      continue;
+    }
+    if (line.includes("Wallet") || line.includes("Base Fee") || line.includes("Listening")) {
+      inAccounts = false;
+      inKeys = false;
+    }
+
+    if (inAccounts) {
+      const match = line.match(/(0x[0-9a-fA-F]{40})/);
+      if (match) addresses.push(match[1]);
+    }
+    if (inKeys) {
+      const match = line.match(/(0x[0-9a-fA-F]{64})/);
+      if (match) keys.push(match[1]);
+    }
+  }
+
+  for (let i = 0; i < Math.min(addresses.length, keys.length); i++) {
+    accounts.push({ address: addresses[i], privateKey: keys[i] });
+  }
+
+  const chainMatch = raw.match(/Chain ID:\s*(\d+)/);
+
+  return { accounts, chainId: chainMatch?.[1] };
+}
+
 export async function anvilZkSync(input: AnvilZkSyncInput): Promise<ToolResult> {
   const port = input.port ?? 8011;
 
@@ -87,18 +136,42 @@ export async function anvilZkSync(input: AnvilZkSyncInput): Promise<ToolResult> 
     child.on("error", (err) => {
       resolve({
         success: false,
-        output: `Failed to start anvil-zksync: ${err.message}\n\nMake sure anvil-zksync is installed (foundryup-zksync).`,
+        output:
+          `Failed to start anvil-zksync: ${err.message}\n\n` +
+          "Make sure anvil-zksync is installed (foundryup-zksync).",
       });
     });
 
     const readyTimeout = setTimeout(() => {
       child.unref();
+
+      const raw = stdout + stderr;
+      const parsed = parseAnvilOutput(raw);
+
+      const structured = [
+        `anvil-zksync started (PID: ${child.pid})`,
+        `RPC URL: http://127.0.0.1:${port}`,
+      ];
+
+      if (parsed.chainId) {
+        structured.push(`Chain ID: ${parsed.chainId}`);
+      }
+
+      if (parsed.accounts.length > 0) {
+        structured.push("");
+        structured.push("Accounts:");
+        for (const acct of parsed.accounts) {
+          structured.push(`  ${acct.address} (key: ${acct.privateKey})`);
+        }
+      }
+
+      structured.push("");
+      structured.push("--- Raw Output ---");
+      structured.push(raw);
+
       resolve({
         success: true,
-        output:
-          `anvil-zksync started on port ${port} (PID: ${child.pid}).\n\n` +
-          `RPC URL: http://127.0.0.1:${port}\n` +
-          (stdout ? `\n${stdout}` : ""),
+        output: structured.join("\n"),
       });
     }, 3_000);
 

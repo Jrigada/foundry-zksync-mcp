@@ -49,7 +49,10 @@ export async function gasReport(input: GasReportInput): Promise<ToolResult> {
     });
 
     const output = [stdout, stderr].filter(Boolean).join("\n");
-    return { success: true, output: output || "Gas report completed with no output." };
+    const caveat = "\n\nNote: Gas values are aggregate zkSync Era gas units. " +
+      "zkSync gas has four components (intrinsic, validation, execution, pubdata) " +
+      "but only the aggregate is shown. Use the zkSync block explorer for detailed breakdowns.";
+    return { success: true, output: (output || "Gas report completed with no output.") + caveat };
   } catch (err: unknown) {
     const e = err as { stdout?: string; stderr?: string; message: string };
     const output = [e.stdout, e.stderr].filter(Boolean).join("\n") || e.message;

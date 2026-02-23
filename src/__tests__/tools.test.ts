@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { deploy } from "../tools/deploy.js";
 import { castSend } from "../tools/cast_send.js";
+import { verify } from "../tools/verify.js";
 import { readFoundryToml } from "../tools/read_foundry_toml.js";
 import { anvilZkSync } from "../tools/anvil_zksync.js";
 import { buildWalletArgs, hasSigningMethod } from "../tools/shared.js";
@@ -29,6 +30,32 @@ describe("castSend validation", () => {
     });
     expect(result.success).toBe(false);
     expect(result.output).toContain("No signing method");
+  });
+});
+
+describe("verify validation", () => {
+  it("rejects invalid address", async () => {
+    const result = await verify({
+      projectPath: "/tmp/nonexistent",
+      contractAddress: "0x0000000000000000000000000000000000000001",
+      contractPath: "src/Token.sol:Token",
+      verifier: "etherscan",
+      verifierUrl: "https://api-era.zksync.network/api",
+    });
+    expect(result.success).toBe(false);
+    expect(result.output).toContain("requires an etherscanApiKey");
+  });
+
+  it("rejects etherscan without API key", async () => {
+    const result = await verify({
+      projectPath: "/tmp/nonexistent",
+      contractAddress: "0x1234567890abcdef1234567890abcdef12345678",
+      contractPath: "src/Token.sol:Token",
+      verifier: "etherscan",
+      verifierUrl: "https://api-era.zksync.network/api",
+    });
+    expect(result.success).toBe(false);
+    expect(result.output).toContain("etherscanApiKey");
   });
 });
 

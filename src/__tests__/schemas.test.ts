@@ -364,7 +364,7 @@ describe("verifySchema", () => {
   it("accepts zksync verifier", () => {
     const result = verifySchema.safeParse({
       projectPath: "/project",
-      contractAddress: "0x1234",
+      contractAddress: "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
       contractPath: "src/Token.sol:Token",
       verifier: "zksync",
       verifierUrl: "https://explorer.zksync.io/contract_verification",
@@ -372,21 +372,49 @@ describe("verifySchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("rejects invalid verifier", () => {
+  it("rejects invalid address format", () => {
     const result = verifySchema.safeParse({
       projectPath: "/project",
       contractAddress: "0x1234",
+      contractPath: "src/Token.sol:Token",
+      verifier: "zksync",
+      verifierUrl: "https://explorer.zksync.io/contract_verification",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid verifier", () => {
+    const result = verifySchema.safeParse({
+      projectPath: "/project",
+      contractAddress: "0x1234567890abcdef1234567890abcdef12345678",
       contractPath: "src/Token.sol:Token",
       verifier: "blockscout",
       verifierUrl: "https://example.com",
     });
     expect(result.success).toBe(false);
   });
+
+  it("accepts retries parameter", () => {
+    const result = verifySchema.safeParse({
+      projectPath: "/project",
+      contractAddress: "0x1234567890abcdef1234567890abcdef12345678",
+      contractPath: "src/Token.sol:Token",
+      verifier: "zksync",
+      verifierUrl: "https://explorer.zksync.io/contract_verification",
+      retries: 3,
+    });
+    expect(result.success).toBe(true);
+  });
 });
 
 describe("readFoundryTomlSchema", () => {
   it("accepts projectPath", () => {
     const result = readFoundryTomlSchema.safeParse({ projectPath: "/project" });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts summary flag", () => {
+    const result = readFoundryTomlSchema.safeParse({ projectPath: "/project", summary: true });
     expect(result.success).toBe(true);
   });
 });

@@ -6,6 +6,8 @@ import { profileField, buildEnv } from "./shared.js";
 
 const execFileAsync = promisify(execFile);
 
+const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
+
 export const verifySchema = z.object({
   projectPath: z
     .string()
@@ -13,6 +15,7 @@ export const verifySchema = z.object({
   profile: profileField,
   contractAddress: z
     .string()
+    .regex(/^0x[0-9a-fA-F]{40}$/, "Must be a valid 40-character hex address")
     .describe("Deployed contract address to verify"),
   contractPath: z
     .string()
@@ -47,6 +50,13 @@ export const verifySchema = z.object({
     .number()
     .optional()
     .describe("Number of optimization runs used during compilation"),
+  retries: z
+    .number()
+    .int()
+    .min(0)
+    .max(10)
+    .optional()
+    .describe("Number of verification retries (default: 2, max: 10). Forge retries on transient failures."),
   extraArgs: z
     .array(z.string())
     .optional()
@@ -56,6 +66,20 @@ export const verifySchema = z.object({
 export type VerifyInput = z.infer<typeof verifySchema>;
 
 export async function verify(input: VerifyInput): Promise<ToolResult> {
+  if (!ADDRESS_RE.test(input.contractAddress)) {
+    return {
+      success: false,
+      output: `Invalid contract address: "${input.contractAddress}". Must be a 0x-prefixed 40-character hex string.`,
+    };
+  }
+
+  if (input.verifier === "etherscan" && !input.etherscanApiKey) {
+    return {
+      success: false,
+      output: "Etherscan verifier requires an etherscanApiKey. Use verifier='zksync' if you don't have one.",
+    };
+  }
+
   const args: string[] = [
     "verify-contract",
     "--zksync",
@@ -63,6 +87,7 @@ export async function verify(input: VerifyInput): Promise<ToolResult> {
     input.contractPath,
     "--verifier", input.verifier,
     "--verifier-url", input.verifierUrl,
+    "--retries", String(input.retries ?? 2),
   ];
 
   if (input.etherscanApiKey) {
@@ -86,7 +111,7 @@ export async function verify(input: VerifyInput): Promise<ToolResult> {
       cwd: input.projectPath,
       env: buildEnv(input.profile),
       maxBuffer: 10 * 1024 * 1024,
-      timeout: 120_000,
+      timeout: 60_000,
     });
 
     const output = [stdout, stderr].filter(Boolean).join("\n");

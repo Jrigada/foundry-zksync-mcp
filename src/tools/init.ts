@@ -58,6 +58,7 @@ export async function init(input: InitInput): Promise<ToolResult> {
   try {
     const { stdout, stderr } = await execFileAsync("forge", args, {
       cwd: input.projectPath,
+      env: process.env,
       maxBuffer: 10 * 1024 * 1024,
       timeout: 120_000,
     });
@@ -70,8 +71,13 @@ export async function init(input: InitInput): Promise<ToolResult> {
       const tomlPath = join(projectDir, "foundry.toml");
       const existing = await readFile(tomlPath, "utf-8");
       if (!existing.includes("[profile.default.zksync]")) {
-        await writeFile(tomlPath, existing.trimEnd() + "\n" + ZKSYNC_CONFIG_BLOCK, "utf-8");
-        configNote = "\n\nAdded [profile.default.zksync] section to foundry.toml.";
+        const patched = existing.trimEnd() + "\n" + ZKSYNC_CONFIG_BLOCK;
+        await writeFile(tomlPath, patched, "utf-8");
+        configNote =
+          "\n\nAdded zkSync config to foundry.toml:\n" +
+          "```toml" + ZKSYNC_CONFIG_BLOCK + "```";
+      } else {
+        configNote = "\n\n[profile.default.zksync] already present in foundry.toml.";
       }
     } catch {
       configNote = "\n\nNote: could not patch foundry.toml — add [profile.default.zksync] manually.";
@@ -82,7 +88,16 @@ export async function init(input: InitInput): Promise<ToolResult> {
       output: (initOutput || "Project initialized.") + configNote,
     };
   } catch (err: unknown) {
-    const e = err as { stdout?: string; stderr?: string; message: string };
+    const e = err as { code?: string; stdout?: string; stderr?: string; message: string };
+    if (e.code === "ENOENT") {
+      return {
+        success: false,
+        output:
+          "Could not find 'forge' binary. Make sure foundry-zksync is installed and in your PATH.\n\n" +
+          "Install: curl -L https://raw.githubusercontent.com/matter-labs/foundry-zksync/main/install-foundry-zksync | bash\n" +
+          "Verify: forge --version",
+      };
+    }
     const output = [e.stdout, e.stderr].filter(Boolean).join("\n") || e.message;
     return { success: false, output };
   }
