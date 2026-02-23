@@ -2,6 +2,7 @@ import { z } from "zod";
 import { execFile, spawn } from "node:child_process";
 import { promisify } from "node:util";
 import type { ToolResult } from "./compile.js";
+import { buildEnv } from "./shared.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -93,7 +94,7 @@ export async function anvilZkSync(input: AnvilZkSyncInput): Promise<ToolResult> 
       const { stdout } = await execFileAsync(
         "cast",
         ["chain-id", "--rpc-url", `http://127.0.0.1:${port}`],
-        { timeout: 5_000 },
+        { env: buildEnv(), timeout: 5_000 },
       );
       return { success: true, output: `anvil-zksync is running on port ${port}. Chain ID: ${stdout.trim()}` };
     } catch {
@@ -121,6 +122,7 @@ export async function anvilZkSync(input: AnvilZkSyncInput): Promise<ToolResult> 
     const child = spawn("anvil-zksync", args, {
       stdio: ["ignore", "pipe", "pipe"],
       detached: true,
+      env: buildEnv(),
     });
 
     let stdout = "";

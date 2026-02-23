@@ -2,6 +2,7 @@ import { z } from "zod";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import type { ToolResult } from "./compile.js";
+import { buildEnv } from "./shared.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -37,6 +38,7 @@ export async function install(input: InstallInput): Promise<ToolResult> {
   try {
     const { stdout, stderr } = await execFileAsync("forge", args, {
       cwd: input.projectPath,
+      env: buildEnv(),
       maxBuffer: 10 * 1024 * 1024,
       timeout: 120_000,
     });

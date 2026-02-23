@@ -2,7 +2,7 @@ import { z } from "zod";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import type { ToolResult } from "./compile.js";
-import { profileField, walletFields, buildEnv, buildWalletArgs } from "./shared.js";
+import { profileField, walletFields, buildEnv, buildWalletArgsForScript } from "./shared.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -63,7 +63,7 @@ export async function runScript(input: RunScriptInput): Promise<ToolResult> {
     args.push("--slow");
   }
 
-  args.push(...buildWalletArgs(input));
+  args.push(...buildWalletArgsForScript(input));
 
   if (input.extraArgs) {
     args.push(...input.extraArgs);

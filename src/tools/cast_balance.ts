@@ -2,6 +2,7 @@ import { z } from "zod";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import type { ToolResult } from "./compile.js";
+import { buildEnv } from "./shared.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -36,6 +37,7 @@ export async function castBalance(input: CastBalanceInput): Promise<ToolResult> 
 
   try {
     const { stdout, stderr } = await execFileAsync("cast", args, {
+      env: buildEnv(),
       timeout: 30_000,
       maxBuffer: 1024 * 1024,
     });

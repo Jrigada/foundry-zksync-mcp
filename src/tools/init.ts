@@ -4,6 +4,7 @@ import { promisify } from "node:util";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { ToolResult } from "./compile.js";
+import { buildEnv } from "./shared.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -58,7 +59,7 @@ export async function init(input: InitInput): Promise<ToolResult> {
   try {
     const { stdout, stderr } = await execFileAsync("forge", args, {
       cwd: input.projectPath,
-      env: process.env,
+      env: buildEnv(),
       maxBuffer: 10 * 1024 * 1024,
       timeout: 120_000,
     });

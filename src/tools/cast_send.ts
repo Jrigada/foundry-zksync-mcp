@@ -2,7 +2,7 @@ import { z } from "zod";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import type { ToolResult } from "./compile.js";
-import { walletFields, buildWalletArgs, hasSigningMethod } from "./shared.js";
+import { walletFields, buildEnv, buildWalletArgs, hasSigningMethod } from "./shared.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -70,6 +70,7 @@ export async function castSend(input: CastSendInput): Promise<ToolResult> {
 
   try {
     const { stdout, stderr } = await execFileAsync("cast", args, {
+      env: buildEnv(),
       timeout: 60_000,
       maxBuffer: 1024 * 1024,
     });
