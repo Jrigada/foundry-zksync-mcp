@@ -1,9 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { deploy } from "../tools/deploy.js";
 import { castSend } from "../tools/cast_send.js";
-
-// These tests verify the application-level validation that runs
-// BEFORE any CLI command is spawned. No forge/cast needed.
+import { readFoundryToml } from "../tools/read_foundry_toml.js";
+import { anvilZkSync } from "../tools/anvil_zksync.js";
 
 describe("deploy validation", () => {
   it("rejects when neither privateKey nor keystore is provided", async () => {
@@ -26,5 +25,26 @@ describe("castSend validation", () => {
     });
     expect(result.success).toBe(false);
     expect(result.output).toContain("privateKey or keystore");
+  });
+});
+
+describe("readFoundryToml", () => {
+  it("returns error for missing foundry.toml", async () => {
+    const result = await readFoundryToml({
+      projectPath: "/tmp/definitely-not-a-foundry-project-" + Date.now(),
+    });
+    expect(result.success).toBe(false);
+    expect(result.output).toContain("No foundry.toml found");
+  });
+});
+
+describe("anvilZkSync check", () => {
+  it("reports not running when no node is active", async () => {
+    const result = await anvilZkSync({
+      action: "check",
+      port: 59999,
+    });
+    expect(result.success).toBe(false);
+    expect(result.output).toContain("No response");
   });
 });

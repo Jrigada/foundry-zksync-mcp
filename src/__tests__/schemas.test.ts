@@ -8,6 +8,14 @@ import { castAbiDecodeSchema } from "../tools/cast_abi_decode.js";
 import { castCalldataDecodeSchema } from "../tools/cast_calldata_decode.js";
 import { castCallSchema } from "../tools/cast_call.js";
 import { castSendSchema } from "../tools/cast_send.js";
+import { castBalanceSchema } from "../tools/cast_balance.js";
+import { castNonceSchema } from "../tools/cast_nonce.js";
+import { initSchema } from "../tools/init.js";
+import { verifySchema } from "../tools/verify.js";
+import { readFoundryTomlSchema } from "../tools/read_foundry_toml.js";
+import { gasReportSchema } from "../tools/gas_report.js";
+import { snapshotSchema } from "../tools/snapshot.js";
+import { anvilZkSyncSchema } from "../tools/anvil_zksync.js";
 
 describe("compileSchema", () => {
   it("accepts valid input", () => {
@@ -238,5 +246,159 @@ describe("castSendSchema", () => {
       keystore: "/path/to/keystore.json",
     });
     expect(result.success).toBe(true);
+  });
+});
+
+describe("castBalanceSchema", () => {
+  it("accepts required fields", () => {
+    const result = castBalanceSchema.safeParse({
+      address: "0x1234567890abcdef1234567890abcdef12345678",
+      rpcUrl: "https://mainnet.era.zksync.io",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts ether flag and blockTag", () => {
+    const result = castBalanceSchema.safeParse({
+      address: "0x1234",
+      rpcUrl: "https://mainnet.era.zksync.io",
+      ether: true,
+      blockTag: "latest",
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("castNonceSchema", () => {
+  it("accepts required fields", () => {
+    const result = castNonceSchema.safeParse({
+      address: "0x1234567890abcdef1234567890abcdef12345678",
+      rpcUrl: "https://mainnet.era.zksync.io",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts blockTag", () => {
+    const result = castNonceSchema.safeParse({
+      address: "0x1234",
+      rpcUrl: "https://mainnet.era.zksync.io",
+      blockTag: "pending",
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("initSchema", () => {
+  it("accepts projectPath only", () => {
+    const result = initSchema.safeParse({ projectPath: "/tmp/new-project" });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts all optional fields", () => {
+    const result = initSchema.safeParse({
+      projectPath: "/tmp",
+      name: "my-project",
+      noGit: true,
+      template: "PaulRBerg/foundry-template",
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("verifySchema", () => {
+  it("accepts etherscan verifier", () => {
+    const result = verifySchema.safeParse({
+      projectPath: "/project",
+      contractAddress: "0x1234567890abcdef1234567890abcdef12345678",
+      contractPath: "src/Token.sol:Token",
+      verifier: "etherscan",
+      verifierUrl: "https://api-era.zksync.network/api",
+      etherscanApiKey: "KEY123",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts zksync verifier", () => {
+    const result = verifySchema.safeParse({
+      projectPath: "/project",
+      contractAddress: "0x1234",
+      contractPath: "src/Token.sol:Token",
+      verifier: "zksync",
+      verifierUrl: "https://explorer.zksync.io/contract_verification",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid verifier", () => {
+    const result = verifySchema.safeParse({
+      projectPath: "/project",
+      contractAddress: "0x1234",
+      contractPath: "src/Token.sol:Token",
+      verifier: "blockscout",
+      verifierUrl: "https://example.com",
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("readFoundryTomlSchema", () => {
+  it("accepts projectPath", () => {
+    const result = readFoundryTomlSchema.safeParse({ projectPath: "/project" });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("gasReportSchema", () => {
+  it("accepts projectPath only", () => {
+    const result = gasReportSchema.safeParse({ projectPath: "/project" });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts filters", () => {
+    const result = gasReportSchema.safeParse({
+      projectPath: "/project",
+      filter: "testTransfer",
+      contractFilter: "Token",
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("snapshotSchema", () => {
+  it("accepts projectPath only", () => {
+    const result = snapshotSchema.safeParse({ projectPath: "/project" });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts diff and check flags", () => {
+    const result = snapshotSchema.safeParse({
+      projectPath: "/project",
+      diff: true,
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("anvilZkSyncSchema", () => {
+  it("accepts check action", () => {
+    const result = anvilZkSyncSchema.safeParse({ action: "check" });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts start with fork options", () => {
+    const result = anvilZkSyncSchema.safeParse({
+      action: "start",
+      port: 8012,
+      forkUrl: "https://mainnet.era.zksync.io",
+      forkBlockNumber: 1000000,
+      accounts: 5,
+      balance: 100,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid action", () => {
+    const result = anvilZkSyncSchema.safeParse({ action: "stop" });
+    expect(result.success).toBe(false);
   });
 });

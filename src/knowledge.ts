@@ -800,6 +800,175 @@ export const knowledgeBase: KnowledgeEntry[] = [
     fix: "If you need a different sender, use vm.prank() or vm.startPrank() to override.",
     tags: ["address", "testing"],
   },
+
+  {
+    patterns: [
+      /LLVM.*error/i,
+      /llvm.*compilation/i,
+      /zksolc.*LLVM/i,
+      /compilation.*failed.*llvm/i,
+    ],
+    title: "LLVM backend error in zksolc",
+    explanation:
+      "zksolc uses an LLVM backend to compile Solidity to EraVM bytecode. " +
+      "LLVM errors typically indicate code patterns the compiler cannot handle, " +
+      "such as deeply nested inline assembly, unusual control flow, or features " +
+      "not yet implemented in the zkSync LLVM backend.",
+    fix:
+      "1. Simplify inline assembly blocks — zksolc has limited Yul/assembly support.\n" +
+      "2. Try force_evmla = true in foundry.toml to use EVMLA codegen instead of Yul.\n" +
+      "3. Update zksolc — newer versions fix many LLVM backend issues.\n" +
+      "4. If the error is in a dependency, check if a zkSync-compatible version exists.",
+    tags: ["compiler", "llvm", "zksolc"],
+  },
+
+  {
+    patterns: [
+      /EIP-?712/i,
+      /type.*hash.*mismatch/i,
+      /0x71.*transaction/i,
+    ],
+    title: "EIP-712 transaction type on zkSync",
+    explanation:
+      "zkSync uses EIP-712 type 0x71 transactions for deploying contracts with factory_deps. " +
+      "These transactions have a different structure from standard EVM transactions. " +
+      "Type hash mismatches typically occur when constructing transactions manually " +
+      "or when middleware doesn't support zkSync transaction types.",
+    fix:
+      "Use forge script --zksync or forge create --zksync to construct transactions properly. " +
+      "If building transactions manually, use the zkSync SDK or ensure you're constructing " +
+      "EIP-712 type 0x71 transactions with the correct factory_deps field.",
+    tags: ["transaction", "eip712", "deployment"],
+  },
+
+  {
+    patterns: [
+      /anvil.*zksync/i,
+      /era.*test.*node/i,
+      /local.*zk.*node/i,
+      /in-memory.*node/i,
+    ],
+    title: "anvil-zksync local development node",
+    explanation:
+      "anvil-zksync is the local zkSync development node (replacement for era-test-node). " +
+      "It runs an in-memory zkSync node for testing. Default port is 8011 (not 8545 like anvil). " +
+      "It supports forking from mainnet/testnet.",
+    fix:
+      "Start with: anvil-zksync\n" +
+      "Fork mainnet: anvil-zksync --fork-url https://mainnet.era.zksync.io\n" +
+      "Default RPC: http://127.0.0.1:8011\n\n" +
+      "Make sure you installed via foundryup-zksync, not foundryup.",
+    tags: ["anvil", "local", "testing"],
+  },
+
+  {
+    patterns: [
+      /assemblycreate/i,
+      /suppressed.*warning/i,
+      /assembly.*CREATE.*not.*supported/i,
+    ],
+    title: "Assembly CREATE not supported warning",
+    explanation:
+      "zksolc warns about inline assembly CREATE/CREATE2 usage because these opcodes " +
+      "don't work the same way on EraVM. All deployments must go through the " +
+      "ContractDeployer system contract. Libraries like OpenZeppelin that use " +
+      "assembly for CREATE trigger this warning.",
+    fix:
+      "Suppress benign warnings in foundry.toml:\n" +
+      '  [profile.default.zksync]\n' +
+      '  suppressed_warnings = ["assemblycreate"]\n\n' +
+      "If the warning is for your own code, use new Contract() syntax instead of assembly CREATE.",
+    tags: ["compiler", "assembly", "warning"],
+  },
+
+  {
+    patterns: [
+      /missing.*library/i,
+      /unresolved.*library/i,
+      /library.*not.*found/i,
+      /linking.*error/i,
+    ],
+    title: "Unresolved library linking",
+    explanation:
+      "The contract references a library that hasn't been linked. In zkSync, libraries " +
+      "that can't be inlined must be deployed as separate contracts and linked at compile time " +
+      "by providing their deployed addresses in foundry.toml.",
+    fix:
+      "1. Deploy the library: forge create --zksync src/MyLib.sol:MyLib ...\n" +
+      "2. Add to foundry.toml:\n" +
+      "   [profile.default.libraries]\n" +
+      '   src/MyLib.sol:MyLib = "0xDeployedLibAddress"\n' +
+      "3. Recompile the main contract.",
+    tags: ["compiler", "library", "linking"],
+  },
+
+  {
+    patterns: [
+      /selfdestruct/i,
+      /SELFDESTRUCT.*deprecated/i,
+    ],
+    title: "SELFDESTRUCT not supported on zkSync",
+    explanation:
+      "EraVM does not support the SELFDESTRUCT opcode. It was deprecated in EVM " +
+      "(EIP-6780) and never implemented in zkSync Era. Contracts using selfdestruct " +
+      "will fail compilation with zksolc or revert at runtime.",
+    fix:
+      "Remove selfdestruct from contract logic. Use a disable/pause pattern instead " +
+      "if you need to deactivate a contract.",
+    tags: ["eravm", "opcode", "selfdestruct"],
+  },
+
+  {
+    patterns: [
+      /EXTCODECOPY/i,
+      /extcodecopy.*not.*supported/i,
+    ],
+    title: "EXTCODECOPY not supported on zkSync",
+    explanation:
+      "EraVM does not support EXTCODECOPY. On zkSync, contract code is stored as hashes " +
+      "in AccountCodeStorage, not as raw bytecode accessible via EXTCODECOPY.",
+    fix:
+      "Use EXTCODEHASH instead if you need to verify contract identity. " +
+      "For code retrieval, query the RPC with eth_getCode.",
+    tags: ["eravm", "opcode", "extcodecopy"],
+  },
+
+  {
+    patterns: [
+      /vm\.deal.*zksync/i,
+      /deal.*not.*work/i,
+      /balance.*cheatcode/i,
+    ],
+    title: "vm.deal works differently on zkSync",
+    explanation:
+      "vm.deal() on zkSync modifies the L2BaseToken (0x...800b) balance mapping, " +
+      "not the account's ETH balance directly. In some contexts, this can cause " +
+      "inconsistencies between the reported balance and the actual spendable amount.",
+    fix:
+      "Use vm.deal() as normal — it should work in most test scenarios. " +
+      "If you see balance inconsistencies, try using the L2BaseToken interface directly " +
+      "or send actual ETH from a funded account instead.",
+    tags: ["testing", "cheatcode", "deal"],
+  },
+
+  {
+    patterns: [
+      /fee.*too.*low/i,
+      /max.*fee.*per.*gas/i,
+      /gas.*price.*too.*low/i,
+      /underpriced/i,
+    ],
+    title: "Transaction fee too low",
+    explanation:
+      "The gas price or max fee per gas is below the network minimum. " +
+      "zkSync has a dynamic fee model where minimum gas price depends on L1 gas prices " +
+      "and network congestion.",
+    fix:
+      "Let forge estimate the gas price automatically (don't set --gas-price manually). " +
+      "If you must set it, query the current gas price first:\n" +
+      "  cast gas-price --rpc-url <rpc_url>",
+    tags: ["gas", "fee", "transaction"],
+  },
 ];
 
 export function matchKnowledge(rawText: string): KnowledgeEntry[] {

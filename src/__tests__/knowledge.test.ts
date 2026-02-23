@@ -151,6 +151,58 @@ describe("matchKnowledge", () => {
     const matches = matchKnowledge("hello world this is a normal message");
     expect(matches).toHaveLength(0);
   });
+
+  it("matches LLVM backend error", () => {
+    const matches = matchKnowledge("LLVM error during zksolc compilation");
+    expect(matches.length).toBeGreaterThan(0);
+    expect(matches.some((m) => m.tags.includes("llvm"))).toBe(true);
+  });
+
+  it("matches EIP-712 transaction type", () => {
+    const matches = matchKnowledge("EIP-712 type hash mismatch in 0x71 transaction");
+    expect(matches.length).toBeGreaterThan(0);
+    expect(matches.some((m) => m.tags.includes("eip712"))).toBe(true);
+  });
+
+  it("matches anvil-zksync reference", () => {
+    const matches = matchKnowledge("how to set up anvil-zksync for local testing");
+    expect(matches.length).toBeGreaterThan(0);
+    expect(matches.some((m) => m.tags.includes("anvil"))).toBe(true);
+  });
+
+  it("matches assemblycreate warning", () => {
+    const matches = matchKnowledge("Warning: assemblycreate opcode used in dependency");
+    expect(matches.length).toBeGreaterThan(0);
+  });
+
+  it("matches SELFDESTRUCT", () => {
+    const matches = matchKnowledge("selfdestruct is not supported on EraVM");
+    expect(matches.length).toBeGreaterThan(0);
+    expect(matches.some((m) => m.tags.includes("selfdestruct"))).toBe(true);
+  });
+
+  it("matches EXTCODECOPY", () => {
+    const matches = matchKnowledge("EXTCODECOPY not supported");
+    expect(matches.length).toBeGreaterThan(0);
+  });
+
+  it("matches vm.deal on zkSync", () => {
+    const matches = matchKnowledge("vm.deal not working on zksync test");
+    expect(matches.length).toBeGreaterThan(0);
+    expect(matches.some((m) => m.tags.includes("deal"))).toBe(true);
+  });
+
+  it("matches fee too low", () => {
+    const matches = matchKnowledge("transaction underpriced, fee too low");
+    expect(matches.length).toBeGreaterThan(0);
+    expect(matches.some((m) => m.tags.includes("fee"))).toBe(true);
+  });
+
+  it("matches library linking error", () => {
+    const matches = matchKnowledge("unresolved library reference, linking error");
+    expect(matches.length).toBeGreaterThan(0);
+    expect(matches.some((m) => m.tags.includes("linking"))).toBe(true);
+  });
 });
 
 describe("formatKnowledgeMatches", () => {

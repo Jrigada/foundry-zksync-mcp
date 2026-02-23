@@ -57,6 +57,22 @@ export const deploySchema = z.object({
 
 export type DeployInput = z.infer<typeof deploySchema>;
 
+interface DeployResult {
+  contractAddress: string;
+  transactionHash: string;
+  deployer: string;
+}
+
+function parseDeployOutput(raw: string): DeployResult | null {
+  const address = raw.match(/Deployed to:\s*(0x[0-9a-fA-F]{40})/)?.[1];
+  const txHash = raw.match(/Transaction hash:\s*(0x[0-9a-fA-F]{64})/)?.[1];
+  const deployer = raw.match(/Deployer:\s*(0x[0-9a-fA-F]{40})/)?.[1];
+  if (address && txHash && deployer) {
+    return { contractAddress: address, transactionHash: txHash, deployer };
+  }
+  return null;
+}
+
 export async function deploy(input: DeployInput): Promise<ToolResult> {
   if (!input.privateKey && !input.keystore) {
     return {
@@ -101,7 +117,11 @@ export async function deploy(input: DeployInput): Promise<ToolResult> {
     });
 
     const output = [stdout, stderr].filter(Boolean).join("\n");
-    return { success: true, output: output || "Deployment completed." };
+    const structured = parseDeployOutput(output);
+    const summary = structured
+      ? `Deployed to: ${structured.contractAddress}\nTx hash: ${structured.transactionHash}\nDeployer: ${structured.deployer}\n\n${output}`
+      : output || "Deployment completed.";
+    return { success: true, output: summary };
   } catch (err: unknown) {
     const e = err as { stdout?: string; stderr?: string; message: string };
     const output = [e.stdout, e.stderr].filter(Boolean).join("\n") || e.message;

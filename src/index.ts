@@ -13,13 +13,21 @@ import { castAbiDecodeSchema, castAbiDecode } from "./tools/cast_abi_decode.js";
 import { castCalldataDecodeSchema, castCalldataDecode } from "./tools/cast_calldata_decode.js";
 import { castCallSchema, castCall } from "./tools/cast_call.js";
 import { castSendSchema, castSend } from "./tools/cast_send.js";
+import { castBalanceSchema, castBalance } from "./tools/cast_balance.js";
+import { castNonceSchema, castNonce } from "./tools/cast_nonce.js";
 import { getZkSyncDocsSchema, getZkSyncDocs } from "./tools/get_zksync_docs.js";
 import { installSchema, install } from "./tools/install.js";
 import { cleanSchema, clean } from "./tools/clean.js";
+import { initSchema, init } from "./tools/init.js";
+import { verifySchema, verify } from "./tools/verify.js";
+import { readFoundryTomlSchema, readFoundryToml } from "./tools/read_foundry_toml.js";
+import { gasReportSchema, gasReport } from "./tools/gas_report.js";
+import { snapshotSchema, snapshot } from "./tools/snapshot.js";
+import { anvilZkSyncSchema, anvilZkSync } from "./tools/anvil_zksync.js";
 
 const server = new McpServer({
   name: "foundry-zksync-mcp",
-  version: "0.1.0",
+  version: "0.2.0",
 });
 
 function formatResult(result: ToolResult) {
@@ -28,6 +36,13 @@ function formatResult(result: ToolResult) {
     isError: !result.success,
   };
 }
+
+server.tool(
+  "init",
+  "Scaffold a new foundry project and add [profile.default.zksync] config (forge init)",
+  initSchema.shape,
+  async (input) => formatResult(await init(input)),
+);
 
 server.tool(
   "install",
@@ -70,9 +85,42 @@ server.tool(
 
 server.tool(
   "deploy",
-  "Deploy a contract to a zkSync network (forge create --zksync)",
+  "Deploy a contract to a zkSync network (forge create --zksync). " +
+    "Returns structured output with contract address, tx hash, and deployer.",
   deploySchema.shape,
   async (input) => formatResult(await deploy(input)),
+);
+
+server.tool(
+  "verify",
+  "Verify a deployed contract on a block explorer (forge verify-contract --zksync). " +
+    "Supports Etherscan (requires API key) and zkSync Explorer (no key needed).",
+  verifySchema.shape,
+  async (input) => formatResult(await verify(input)),
+);
+
+server.tool(
+  "gas_report",
+  "Run tests and generate a gas usage report (forge test --zksync --gas-report). " +
+    "Note: zkSync gas values are aggregate-only (no computation/pubdata breakdown).",
+  gasReportSchema.shape,
+  async (input) => formatResult(await gasReport(input)),
+);
+
+server.tool(
+  "snapshot",
+  "Create or compare gas snapshots (forge snapshot --zksync). " +
+    "Use diff=true to compare against existing .gas-snapshot, check=true to fail on changes.",
+  snapshotSchema.shape,
+  async (input) => formatResult(await snapshot(input)),
+);
+
+server.tool(
+  "read_foundry_toml",
+  "Read and return the contents of foundry.toml from a project. " +
+    "Useful for inspecting profiles, zkSync config, library links, and other settings.",
+  readFoundryTomlSchema.shape,
+  async (input) => formatResult(await readFoundryToml(input)),
 );
 
 server.tool(
@@ -120,12 +168,35 @@ server.tool(
 );
 
 server.tool(
+  "cast_balance",
+  "Query the ETH balance of an address (cast balance)",
+  castBalanceSchema.shape,
+  async (input) => formatResult(await castBalance(input)),
+);
+
+server.tool(
+  "cast_nonce",
+  "Query the transaction nonce of an address (cast nonce). " +
+    "Note: on zkSync this returns the TX nonce only, not the deploy nonce.",
+  castNonceSchema.shape,
+  async (input) => formatResult(await castNonce(input)),
+);
+
+server.tool(
   "get_zksync_docs",
   "Look up foundry-zksync documentation by topic. Returns URLs to the foundry-zksync book " +
     "for installation, config, testing, deployment, cheatcodes, nonces, factory deps, " +
     "paymasters, verification, and more. Use topic='list' to see all available topics.",
   getZkSyncDocsSchema.shape,
   async (input) => formatResult(await getZkSyncDocs(input)),
+);
+
+server.tool(
+  "anvil_zksync",
+  "Start or check a local anvil-zksync development node. " +
+    "Supports forking from mainnet/testnet. Default port: 8011.",
+  anvilZkSyncSchema.shape,
+  async (input) => formatResult(await anvilZkSync(input)),
 );
 
 async function main() {
