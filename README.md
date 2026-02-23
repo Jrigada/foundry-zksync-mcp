@@ -67,6 +67,68 @@ Or add to `claude_desktop_config.json`:
 }
 ```
 
+## Key Management
+
+This MCP server **does not accept raw private keys**. Since tool parameters travel through the MCP JSON-RPC channel (and are visible to the AI assistant), sending a raw key would expose it. Instead, all signing tools (`deploy`, `cast_send`, `run_script`) support these methods:
+
+### Recommended: Named Keystores
+
+The simplest secure option. Keys are encrypted on disk — only the account name is passed through MCP.
+
+```bash
+# Import a private key into a named keystore (interactive, key never shown)
+cast wallet import deployer --interactive
+
+# List your keystores
+ls ~/.foundry/keystores/
+```
+
+Then use `account: "deployer"` in any signing tool. Forge will prompt for the password at runtime, or you can point to a password file with `passwordFile`.
+
+### Keystore Files
+
+If you have an existing encrypted keystore JSON file (e.g. from Geth, MetaMask export):
+
+```
+keystore: "/path/to/keystore.json"
+passwordFile: "/path/to/password.txt"
+```
+
+### Local Development (anvil-zksync)
+
+For local dev, no keys are needed. Use `unlocked: true` with a `from` address:
+
+```
+unlocked: true
+from: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+```
+
+anvil-zksync pre-funds 10 accounts. Check them with `cast_balance`.
+
+### Hardware Wallets
+
+```
+ledger: true    # Ledger
+trezor: true    # Trezor
+```
+
+### Cloud KMS
+
+```
+aws: true       # AWS KMS (set AWS_KMS_KEY_ID env var)
+gcp: true       # Google Cloud KMS (set GCP_PROJECT_ID, GCP_LOCATION, etc.)
+```
+
+### Signing Method Priority
+
+| Method | Key Exposure | Best For |
+|--------|-------------|----------|
+| Hardware wallet | None (key never leaves device) | High-value production |
+| Cloud KMS | None (key in HSM) | Automated production |
+| Named keystore (`account`) | None through MCP (encrypted on disk) | General use |
+| Keystore file | None through MCP (encrypted on disk) | Existing workflows |
+| `unlocked` | N/A (node manages keys) | Local development |
+
 ## Project Structure
 
 ```
@@ -96,5 +158,5 @@ src/
     cast_balance.ts     cast balance
     cast_nonce.ts       cast nonce
     anvil_zksync.ts     anvil-zksync node management
-  __tests__/            102 tests (vitest)
+  __tests__/            119 tests (vitest)
 ```
