@@ -31,49 +31,63 @@ An MCP (Model Context Protocol) server that exposes [foundry-zksync](https://git
 ## Prerequisites
 
 - Node.js >= 18
-- [foundry-zksync](https://github.com/matter-labs/foundry-zksync) installed and available on `PATH`
+- [foundry-zksync](https://github.com/matter-labs/foundry-zksync) installed (`foundryup-zksync`)
 
-## Install & Build
+## Quick Start (npx)
 
-```bash
-npm install
-npm run build
-```
-
-## Run
+No install needed — run directly with npx:
 
 ```bash
-npm start
+claude mcp add foundry-zksync -- npx -y foundry-zksync-mcp
 ```
 
-The server communicates over stdio using the MCP protocol.
-
-## Use with Claude Code
-
-```bash
-claude mcp add foundry-zksync node /absolute/path/to/foundry-zksync-mcp/dist/index.js
-```
-
-Or add to `claude_desktop_config.json`:
+Or add to `claude_desktop_config.json` / `~/.claude.json`:
 
 ```json
 {
   "mcpServers": {
     "foundry-zksync": {
-      "command": "node",
-      "args": ["/absolute/path/to/foundry-zksync-mcp/dist/index.js"]
+      "command": "npx",
+      "args": ["-y", "foundry-zksync-mcp"]
     }
   }
 }
 ```
 
+## Install from Source
+
+```bash
+git clone https://github.com/Jrigada/foundry-zksync-mcp.git
+cd foundry-zksync-mcp
+npm install
+npm run build
+```
+
+Then register with Claude Code:
+
+```bash
+claude mcp add foundry-zksync node /absolute/path/to/foundry-zksync-mcp/dist/index.js
+```
+
 ## Key Management
 
-This MCP server **does not accept raw private keys**. Since tool parameters travel through the MCP JSON-RPC channel (and are visible to the AI assistant), sending a raw key would expose it. Instead, all signing tools (`deploy`, `cast_send`, `run_script`) support these methods:
+All signing tools (`deploy`, `cast_send`, `run_script`) support multiple wallet methods. Choose based on your security needs:
 
-### Recommended: Named Keystores
+### Local Development (anvil-zksync)
 
-The simplest secure option. Keys are encrypted on disk — only the account name is passed through MCP.
+For local dev with well-known test keys, use `privateKey` directly:
+
+```
+privateKey: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+```
+
+These are the default anvil-zksync test accounts — they hold no real value.
+
+> **Warning:** Never use `privateKey` with keys that hold real funds. MCP tool parameters are visible to the AI assistant and may be logged.
+
+### Recommended for Production: Named Keystores
+
+Keys are encrypted on disk — only the account name travels through MCP.
 
 ```bash
 # Import a private key into a named keystore (interactive, key never shown)
@@ -94,17 +108,6 @@ keystore: "/path/to/keystore.json"
 passwordFile: "/path/to/password.txt"
 ```
 
-### Local Development (anvil-zksync)
-
-For local dev, no keys are needed. Use `unlocked: true` with a `from` address:
-
-```
-unlocked: true
-from: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
-```
-
-anvil-zksync pre-funds 10 accounts. Check them with `cast_balance`.
-
 ### Hardware Wallets
 
 ```
@@ -119,15 +122,15 @@ aws: true       # AWS KMS (set AWS_KMS_KEY_ID env var)
 gcp: true       # Google Cloud KMS (set GCP_PROJECT_ID, GCP_LOCATION, etc.)
 ```
 
-### Signing Method Priority
+### Signing Method Summary
 
 | Method | Key Exposure | Best For |
 |--------|-------------|----------|
 | Hardware wallet | None (key never leaves device) | High-value production |
 | Cloud KMS | None (key in HSM) | Automated production |
-| Named keystore (`account`) | None through MCP (encrypted on disk) | General use |
+| Named keystore (`account`) | None through MCP (encrypted on disk) | General production use |
 | Keystore file | None through MCP (encrypted on disk) | Existing workflows |
-| `unlocked` | N/A (node manages keys) | Local development |
+| `privateKey` | Visible to AI assistant | Local dev with test keys only |
 
 ## Project Structure
 
@@ -158,5 +161,5 @@ src/
     cast_balance.ts     cast balance
     cast_nonce.ts       cast nonce
     anvil_zksync.ts     anvil-zksync node management
-  __tests__/            119 tests (vitest)
+  __tests__/            133 tests (vitest)
 ```
