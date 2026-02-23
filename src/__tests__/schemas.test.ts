@@ -85,7 +85,8 @@ describe("runScriptSchema", () => {
       scriptPath: "script/Deploy.s.sol",
       rpcUrl: "https://mainnet.era.zksync.io",
       broadcast: true,
-      privateKey: "0xabc",
+      account: "deployer",
+      slow: true,
       extraArgs: ["--verify", "--etherscan-api-key", "key123"],
     });
     expect(result.success).toBe(true);
@@ -102,23 +103,44 @@ describe("runScriptSchema", () => {
 });
 
 describe("deploySchema", () => {
-  it("accepts required fields with privateKey", () => {
+  it("accepts named account signing", () => {
     const result = deploySchema.safeParse({
       projectPath: "/project",
       contractPath: "src/Token.sol:Token",
       rpcUrl: "https://mainnet.era.zksync.io",
-      privateKey: "0xabc",
+      account: "deployer",
     });
     expect(result.success).toBe(true);
   });
 
-  it("accepts keystore instead of privateKey", () => {
+  it("accepts keystore signing", () => {
     const result = deploySchema.safeParse({
       projectPath: "/project",
       contractPath: "src/Token.sol:Token",
       rpcUrl: "https://mainnet.era.zksync.io",
       keystore: "/path/to/keystore.json",
-      keystorePassword: "pass",
+      passwordFile: "/path/to/password",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts unlocked signing for local dev", () => {
+    const result = deploySchema.safeParse({
+      projectPath: "/project",
+      contractPath: "src/Token.sol:Token",
+      rpcUrl: "http://127.0.0.1:8011",
+      unlocked: true,
+      from: "0x1234567890abcdef1234567890abcdef12345678",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts hardware wallet flags", () => {
+    const result = deploySchema.safeParse({
+      projectPath: "/project",
+      contractPath: "src/Token.sol:Token",
+      rpcUrl: "https://mainnet.era.zksync.io",
+      ledger: true,
     });
     expect(result.success).toBe(true);
   });
@@ -128,7 +150,7 @@ describe("deploySchema", () => {
       projectPath: "/project",
       contractPath: "src/Token.sol:Token",
       rpcUrl: "https://mainnet.era.zksync.io",
-      privateKey: "0xabc",
+      account: "deployer",
       constructorArgs: ["0x1234", "1000000", "MyToken"],
     });
     expect(result.success).toBe(true);
@@ -139,9 +161,19 @@ describe("deploySchema", () => {
       projectPath: "/project",
       contractPath: "src/Token.sol:Token",
       rpcUrl: "https://mainnet.era.zksync.io",
-      privateKey: "0xabc",
+      account: "deployer",
       verify: true,
       verifierUrl: "https://api-era.zksync.network/api",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts cloud KMS flags", () => {
+    const result = deploySchema.safeParse({
+      projectPath: "/project",
+      contractPath: "src/Token.sol:Token",
+      rpcUrl: "https://mainnet.era.zksync.io",
+      aws: true,
     });
     expect(result.success).toBe(true);
   });
@@ -216,34 +248,45 @@ describe("castCallSchema", () => {
 });
 
 describe("castSendSchema", () => {
-  it("accepts required fields with privateKey", () => {
+  it("accepts named account signing", () => {
     const result = castSendSchema.safeParse({
       to: "0x1234",
       signature: "transfer(address,uint256)",
       rpcUrl: "https://mainnet.era.zksync.io",
-      privateKey: "0xabc",
+      account: "sender",
     });
     expect(result.success).toBe(true);
   });
 
-  it("accepts value and gasLimit", () => {
+  it("accepts value and gasLimit with keystore", () => {
     const result = castSendSchema.safeParse({
       to: "0x1234",
       signature: "deposit()",
       rpcUrl: "https://mainnet.era.zksync.io",
-      privateKey: "0xabc",
+      keystore: "/path/to/keystore.json",
       value: "0.1ether",
       gasLimit: "100000",
     });
     expect(result.success).toBe(true);
   });
 
-  it("accepts keystore signing", () => {
+  it("accepts unlocked for local dev", () => {
+    const result = castSendSchema.safeParse({
+      to: "0x1234",
+      signature: "transfer(address,uint256)",
+      rpcUrl: "http://127.0.0.1:8011",
+      unlocked: true,
+      from: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts ledger signing", () => {
     const result = castSendSchema.safeParse({
       to: "0x1234",
       signature: "transfer(address,uint256)",
       rpcUrl: "https://mainnet.era.zksync.io",
-      keystore: "/path/to/keystore.json",
+      ledger: true,
     });
     expect(result.success).toBe(true);
   });

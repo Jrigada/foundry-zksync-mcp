@@ -2,7 +2,7 @@ import { z } from "zod";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import type { ToolResult } from "./compile.js";
-import { profileField, buildEnv } from "./shared.js";
+import { profileField, walletFields, buildEnv, buildWalletArgs } from "./shared.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -23,7 +23,7 @@ export const runScriptSchema = z.object({
     .optional()
     .describe(
       "Address to use as msg.sender for the script simulation (--sender). " +
-      "Useful for dry-run without a private key.",
+      "Useful for dry-run without a signing key.",
     ),
   broadcast: z
     .boolean()
@@ -36,10 +36,9 @@ export const runScriptSchema = z.object({
       "If true, sends transactions sequentially (--slow). " +
       "Required on ZK chains which do not support transaction batching.",
     ),
-  privateKey: z
-    .string()
-    .optional()
-    .describe("Private key for signing transactions (required if broadcast is true)"),
+
+  ...walletFields,
+
   extraArgs: z
     .array(z.string())
     .optional()
@@ -63,9 +62,8 @@ export async function runScript(input: RunScriptInput): Promise<ToolResult> {
   if (input.slow) {
     args.push("--slow");
   }
-  if (input.privateKey) {
-    args.push("--private-key", input.privateKey);
-  }
+
+  args.push(...buildWalletArgs(input));
 
   if (input.extraArgs) {
     args.push(...input.extraArgs);

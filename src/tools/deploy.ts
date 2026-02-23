@@ -2,7 +2,7 @@ import { z } from "zod";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import type { ToolResult } from "./compile.js";
-import { profileField, buildEnv } from "./shared.js";
+import { profileField, walletFields, buildEnv, buildWalletArgs, hasSigningMethod } from "./shared.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -18,20 +18,7 @@ export const deploySchema = z.object({
     .string()
     .describe("RPC URL of the target zkSync network"),
 
-  privateKey: z
-    .string()
-    .optional()
-    .describe(
-      "Private key for signing. WARNING: this will be visible in the process argument list. Prefer keystore for production.",
-    ),
-  keystore: z
-    .string()
-    .optional()
-    .describe("Path to an encrypted keystore file (safer alternative to raw private key)"),
-  keystorePassword: z
-    .string()
-    .optional()
-    .describe("Password to decrypt the keystore file"),
+  ...walletFields,
 
   constructorArgs: z
     .array(z.string())
@@ -74,24 +61,24 @@ function parseDeployOutput(raw: string): DeployResult | null {
 }
 
 export async function deploy(input: DeployInput): Promise<ToolResult> {
-  if (!input.privateKey && !input.keystore) {
+  if (!hasSigningMethod(input)) {
     return {
       success: false,
-      output: "Either privateKey or keystore must be provided for signing the deployment transaction.",
+      output:
+        "No signing method provided. Use one of:\n" +
+        "  account   — named keystore from ~/.foundry/keystores (recommended)\n" +
+        "  keystore  — path to encrypted keystore JSON file\n" +
+        "  unlocked  — for anvil-zksync dev accounts (with 'from' address)\n" +
+        "  ledger    — Ledger hardware wallet\n" +
+        "  trezor    — Trezor hardware wallet\n" +
+        "  aws       — AWS KMS\n" +
+        "  gcp       — Google Cloud KMS\n\n" +
+        "To create a named keystore: cast wallet import <name> --interactive",
     };
   }
 
   const args: string[] = ["create", "--zksync", input.contractPath, "--rpc-url", input.rpcUrl];
-
-  if (input.privateKey) {
-    args.push("--private-key", input.privateKey);
-  }
-  if (input.keystore) {
-    args.push("--keystore", input.keystore);
-    if (input.keystorePassword) {
-      args.push("--password", input.keystorePassword);
-    }
-  }
+  args.push(...buildWalletArgs(input));
 
   if (input.constructorArgs && input.constructorArgs.length > 0) {
     args.push("--constructor-args", ...input.constructorArgs);
